@@ -20,12 +20,12 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
         {
           id: 'initial',
           role: 'bot',
-          text: 'Welcome to Lumina Elite Travel. How can I assist you with your next extraordinary journey today?',
+          text: 'Добро пожаловать в Lumina Elite Travel. Чем я могу помочь вам в планировании вашего следующего экстраординарного путешествия?',
           timestamp: Date.now(),
           options: [
-            { label: 'Discover Hotels', action: { type: 'navigate', path: '/hotels' } },
-            { label: 'View Curated Tours', action: { type: 'navigate', path: '/tours' } },
-            { label: 'Exotic Japan Odyssey', action: { type: 'navigate', path: '/tours', filter: 'Japan' } },
+            { label: 'Посмотреть отели', action: { type: 'navigate', path: '/hotels' } },
+            { label: 'Кураторские туры', action: { type: 'navigate', path: '/tours' } },
+            { label: 'Экзотическая Япония', action: { type: 'navigate', path: '/tours', filter: 'Japan' } },
           ]
         }
       ],
@@ -54,8 +54,13 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
           {
             id: 'initial',
             role: 'bot',
-            text: 'Welcome to Lumina Elite Travel. How can I assist you with your next extraordinary journey today?',
-            timestamp: Date.now()
+            text: 'Добро пожаловать в Lumina Elite Travel. Чем я могу помочь вам в планировании вашего следующего экстраординарного путешествия?',
+            timestamp: Date.now(),
+            options: [
+              { label: 'Посмотреть отели', action: { type: 'navigate', path: '/hotels' } },
+              { label: 'Кураторские туры', action: { type: 'navigate', path: '/tours' } },
+              { label: 'Экзотическая Япония', action: { type: 'navigate', path: '/tours', filter: 'Japan' } },
+            ]
           }
         ] 
       }),

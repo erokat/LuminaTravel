@@ -127,13 +127,21 @@ export async function askAI(prompt: string, history: { role: 'user' | 'model', t
       },
     });
 
-    let rawText = response.text || "";
+    let rawText = "";
+    const parts = response.candidates?.[0]?.content?.parts || [];
+    const textPart = parts.find(p => p.text);
+    if (textPart) {
+      rawText = textPart.text;
+    }
     
     if (!rawText && response.functionCalls && response.functionCalls.length > 0) {
-      const firstCall = response.functionCalls[0];
-      if (firstCall.name === 'navigateToDetail') {
-        const id = firstCall.args.id;
+      const callNames = response.functionCalls.map(c => c.name);
+      if (callNames.includes('navigateToDetail')) {
         rawText = `Мгновение, я открываю для вас подробности этого исключительного места.`;
+      } else if (callNames.includes('setSearchParameters') && callNames.includes('navigateToPage')) {
+        rawText = `Данные зафиксированы. Секунду, я подготовлю для вас соответствующий раздел коллекции.`;
+      } else if (callNames.includes('setSearchParameters')) {
+        rawText = `Отлично, я зафиксировал данные. Могу ли я предложить что-то еще?`;
       } else {
         rawText = `Секунду, я подготовлю для вас соответствующий раздел коллекции.`;
       }

@@ -84,10 +84,25 @@ export default function ChatAssistant() {
         ? `${action.path}?filter=${encodeURIComponent(action.filter)}` 
         : action.path;
       performNav(path);
+      setTyping(true);
+      setTimeout(() => {
+        setTyping(false);
+        addMessage({ role: 'bot', text: 'Конечно. Мгновение, я подготовлю для вас соответствующий раздел коллекции.' });
+      }, 600);
     } else if (action.type === 'select_hotel') {
       performNav(`/hotels/${action.hotelId}`);
+      setTyping(true);
+      setTimeout(() => {
+        setTyping(false);
+        addMessage({ role: 'bot', text: 'Превосходный выбор. Открываю детали этого исключительного места.' });
+      }, 600);
     } else if (action.type === 'select_tour') {
       performNav(`/tours/${action.tourId}`);
+      setTyping(true);
+      setTimeout(() => {
+        setTyping(false);
+        addMessage({ role: 'bot', text: 'Великолепное направление. Открываю подробности для вас.' });
+      }, 600);
     } else if (action.type === 'scripted_next') {
       const step = CHAT_SCRIPTS[action.nextStep];
       if (step) {

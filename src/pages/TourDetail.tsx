@@ -3,7 +3,7 @@ import { tours } from '../data/mockData';
 import { motion } from 'motion/react';
 import { Clock, Users, Star, ArrowLeft, Calendar, ShieldCheck, Map, Camera, ArrowRight, User } from 'lucide-react';
 import { useSearchStore } from '../store/useSearchStore';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
 
 export default function TourDetail() {
@@ -187,7 +187,7 @@ export default function TourDetail() {
                       type="date" 
                       value={formatForInput(checkIn)} 
                       onChange={(e) => setDates(parseFromInput(e.target.value), checkOut)} 
-                      className="bg-transparent text-sm font-medium text-white focus:outline-none w-full cursor-pointer appearance-none" 
+                      className="bg-transparent text-sm font-medium text-white focus:outline-none w-full outline-none cursor-pointer"
                       style={{ colorScheme: 'dark' }}
                     />
                   </div>

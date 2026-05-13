@@ -5,39 +5,39 @@ export interface ScriptStep {
 
 export const CHAT_SCRIPTS: Record<string, ScriptStep> = {
   'booking_start': {
-    text: "Excellent choice. To begin curating your journey, how many travelers will be joining this expedition?",
+    text: "Превосходный выбор. Чтобы начать планирование, скажите, для скольких путешественников мы создаем этот опыт?",
     options: [
-      { label: 'Solo Traveler', action: { type: 'scripted_next', nextStep: 'booking_date' } },
-      { label: 'Couple / 2 People', action: { type: 'scripted_next', nextStep: 'booking_date' } },
-      { label: 'Private Group (3+)', action: { type: 'scripted_next', nextStep: 'booking_date' } }
+      { label: 'Для одного (Соло)', action: { type: 'scripted_next', nextStep: 'booking_date' } },
+      { label: 'Для пары (2 человека)', action: { type: 'scripted_next', nextStep: 'booking_date' } },
+      { label: 'Частная группа (3+)', action: { type: 'scripted_next', nextStep: 'booking_date' } }
     ]
   },
   'booking_date': {
-    text: "Wonderful. And when are you planning to embark on this extraordinary escape?",
+    text: "Прекрасно. И когда вы планируете отправиться в этот необыкновенный побег?",
     options: [
-      { label: 'Next 3 Months', action: { type: 'scripted_next', nextStep: 'booking_contact' } },
-      { label: 'Later this Year', action: { type: 'scripted_next', nextStep: 'booking_contact' } },
-      { label: 'Just Exploring', action: { type: 'navigate', path: '/tours' } }
+      { label: 'В ближайшие 3 месяца', action: { type: 'scripted_next', nextStep: 'booking_contact' } },
+      { label: 'Позже в этом году', action: { type: 'scripted_next', nextStep: 'booking_contact' } },
+      { label: 'Просто изучаю варианты', action: { type: 'navigate', path: '/tours' } }
     ]
   },
   'booking_contact': {
-    text: "Thank you. A senior travel curator will review your preferences. Would you like us to contact you via email or phone for the final itinerary?",
+    text: "Благодарю. Наш старший куратор рассмотрит ваши предпочтения. Как вам удобнее получить готовый маршрут: по электронной почте или по телефону?",
     options: [
-      { label: 'Email me details', action: { type: 'scripted_next', nextStep: 'booking_finish' } },
-      { label: 'Schedule a call', action: { type: 'scripted_next', nextStep: 'booking_finish' } }
+      { label: 'Только Email', action: { type: 'scripted_next', nextStep: 'booking_finish' } },
+      { label: 'Запланировать звонок', action: { type: 'scripted_next', nextStep: 'booking_finish' } }
     ]
   },
   'booking_finish': {
-    text: "Perfect. Your request has been prioritized. We will reach out within 2 hours to finalize your Lumina experience.",
+    text: "Идеально. Ваш запрос был передан в VIP-отдел. Мы свяжемся с вами в течение 2 часов для окончательного оформления вашего опыта Lumina.",
     options: [
-      { label: 'Back to Home', action: { type: 'navigate', path: '/' } },
-      { label: 'View Destinations', action: { type: 'navigate', path: '/destinations' } }
+      { label: 'На главную', action: { type: 'navigate', path: '/' } },
+      { label: 'Все направления', action: { type: 'navigate', path: '/destinations' } }
     ]
   }
 };
 
 export const FAQ_DATA = [
-  { keywords: ['cancel', 'refund'], answer: "Lumina offers flexible cancellations up to 14 days before departure for our Elite members." },
-  { keywords: ['visa', 'passport'], answer: "Our concierge team handles all visa requirements for your selected destinations once your booking is confirmed." },
-  { keywords: ['wifi', 'internet'], answer: "High-speed satellite connectivity is standard across all our private yacht and villa collection." }
+  { keywords: ['отмен', 'возврат', 'вернут', 'бронь'], answer: "Lumina предлагает гибкие условия отмены бронирования за 14 дней до отправления для наших участников уровня Elite." },
+  { keywords: ['виза', 'паспорт', 'документ'], answer: "Наша консьерж-служба берет на себя оформление всех визовых требований для выбранных вами направлений, как только бронирование будет подтверждено." },
+  { keywords: ['интернет', 'wifi', 'вайфай', 'связь'], answer: "Высокоскоростная спутниковая связь предоставляется по умолчанию на всех объектах нашей коллекции частных яхт и вилл." }
 ];

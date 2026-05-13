@@ -3,7 +3,7 @@ import { hotels } from '../data/mockData';
 import { motion } from 'motion/react';
 import { Star, MapPin, CheckCircle2, ChevronLeft, Calendar, User, ArrowRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchStore } from '../store/useSearchStore';
 
 export default function HotelDetail() {
@@ -193,7 +193,7 @@ export default function HotelDetail() {
                     type="date" 
                     value={formatForInput(checkIn)} 
                     onChange={(e) => setDates(parseFromInput(e.target.value), checkOut)}
-                    className="bg-transparent text-sm font-medium text-white focus:outline-none w-full cursor-pointer appearance-none"
+                    className="bg-transparent text-sm font-medium text-white focus:outline-none w-full outline-none cursor-pointer"
                     style={{ colorScheme: 'dark' }}
                   />
                 </div>
@@ -202,9 +202,9 @@ export default function HotelDetail() {
                   <input 
                     type="date" 
                     value={formatForInput(checkOut)} 
-                    onChange={(e) => setDates(checkIn, parseFromInput(e.target.value))}
+                    onChange={(e) => setDates(checkIn, parseFromInput(e.target.value))} 
                     min={formatForInput(checkIn)}
-                    className="bg-transparent text-sm font-medium text-white focus:outline-none w-full cursor-pointer appearance-none" 
+                    className="bg-transparent text-sm font-medium text-white focus:outline-none w-full outline-none cursor-pointer" 
                     style={{ colorScheme: 'dark' }}
                   />
                 </div>
