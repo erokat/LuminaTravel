@@ -4,7 +4,7 @@ import Footer from './Footer';
 import ChatAssistant from './ChatAssistant';
 import ScrollToTop from './ScrollToTop';
 import { motion, AnimatePresence } from 'motion/react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigationType } from 'react-router-dom';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,10 +12,29 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const navType = useNavigationType();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
+    if (navType !== 'POP') {
+      window.scrollTo(0, 0);
+    } else {
+      // Restore scroll position when user navigates back
+      const savedPosition = sessionStorage.getItem(`scroll-${location.key}`);
+      if (savedPosition) {
+        // Small delay to allow DOM to render before scrolling
+        setTimeout(() => {
+          window.scrollTo(0, parseInt(savedPosition, 10));
+        }, 10);
+      }
+    }
+
+    const handleScroll = () => {
+      sessionStorage.setItem(`scroll-${location.key}`, window.scrollY.toString());
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [location.pathname, location.key, navType]);
 
   return (
     <div className="min-h-screen flex flex-col selection:bg-white selection:text-black relative">

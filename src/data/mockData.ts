@@ -147,8 +147,8 @@ export const hotels: Hotel[] = [
     description: 'An exclusive tropical paradise with 12 pristine beaches. Revel in the privacy of your own villa, either on the beach or over the crystal clear turquoise waters.',
     images: [
       'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&q=80&w=1200',
-      'https://images.unsplash.com/photo-1439066615861-d1af74d74000?auto=format&fit=crop&q=80&w=1200',
-      'https://images.unsplash.com/photo-1573843225233-6f3365df4617?auto=format&fit=crop&q=80&w=1200'
+      'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&q=80&w=1200'
     ],
     amenities: ['Overwater Villas', 'Private Pool', 'Diving Center', 'Yoga Pavilion', 'Kids Club'],
     location: {
@@ -209,9 +209,9 @@ export const hotels: Hotel[] = [
     category: 'Resort',
     description: 'Arrive via a dramatic suspension bridge to a riverside sanctuary. This architectural masterpiece is nestled in the lush Ayung River valley of Ubud.',
     images: [
-      'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=1200',
-      'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?auto=format&fit=crop&q=80&w=1200',
-      'https://images.unsplash.com/photo-1506929113614-bb9baf19725b?auto=format&fit=crop&q=80&w=1200'
+      'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1503174971373-b1f69850bded?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=1200'
     ],
     amenities: ['Riverside Yoga', 'Infinity Pool', 'Rice Paddy Walks', 'Sacred Nap Area', 'Private Dining'],
     location: {
@@ -232,7 +232,7 @@ export const hotels: Hotel[] = [
     images: [
       'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&q=80&w=1200',
       'https://images.unsplash.com/photo-1496372412473-e8548ffd82bc?auto=format&fit=crop&q=80&w=1200',
-      'https://images.unsplash.com/photo-1548013146-72479768bbaa?auto=format&fit=crop&q=80&w=1200'
+      'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&q=80&w=1200'
     ],
     amenities: ['Lake View', 'Nightclub', 'Ice Rink', 'Rolls-Royce Transfer', 'Butler Service'],
     location: {
@@ -377,8 +377,8 @@ export const tours: Tour[] = [
     groupSize: 10,
     type: 'Mountain',
     images: [
-      'https://images.unsplash.com/photo-1531310197839-ccf54664b297?auto=format&fit=crop&q=80&w=1200',
-      'https://images.unsplash.com/photo-1476493279419-b785d41e38d8?auto=format&fit=crop&q=80&w=1200'
+      'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1527668752968-14dc70a27c95?auto=format&fit=crop&q=80&w=1200'
     ],
     description: 'Traverse the majestic Alps via the Glacier Express and stay in iconic palace hotels in St. Moritz and Zermatt.'
   },

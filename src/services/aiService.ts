@@ -39,6 +39,32 @@ const navigateToDetailTool: FunctionDeclaration = {
   },
 };
 
+const setSearchParametersTool: FunctionDeclaration = {
+  name: "setSearchParameters",
+  description: "Sets the search parameters like Check-in, Check-out dates and Guest counts (adults, children). Call this when the user mentions their travel dates or who they are traveling with.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      checkIn: {
+        type: Type.STRING,
+        description: "Check-in date in format MMM DD, YYYY (e.g. Aug 12, 2026)",
+      },
+      checkOut: {
+        type: Type.STRING,
+        description: "Check-out date in format MMM DD, YYYY (e.g. Aug 19, 2026)",
+      },
+      adults: {
+        type: Type.NUMBER,
+        description: "Number of adults",
+      },
+      children: {
+        type: Type.NUMBER,
+        description: "Number of children",
+      }
+    },
+  },
+};
+
 export interface AIResponse {
   text: string;
   functionCalls?: any[];
@@ -81,12 +107,13 @@ export async function askAI(prompt: string, history: { role: 'user' | 'model', t
         
         ИНСТРУМЕНТЫ:
         - navigateToPage: используйте для списков (отели, туры, направления, полеты).
-        - navigateToDetail: используйте для конкретных объектов из КАТАЛОГА.
+        - navigateToDetail: используйте, чтобы перевести гостя на страницу отеля, тура, или направления (ЕСЛИ ГОСТЬ НАЗВАЛ/ВЫБРАЛ КОНКРЕТНОЕ МЕСТО, СРАЗУ ВЫЗЫВАЙТЕ ЭТУ ФУНКЦИЮ).
+        - setSearchParameters: ОБЯЗАТЕЛЬНО используйте, если гость называет даты, месяц, время заезда/выезда или количество гостей (взрослых/детей). Парсите всё в формат YYYY-MM-DD если возможно, либо оставляйте текущий год (например, '2026-08-12', '2026-08-19').
         - КАТАЛОГ: ${catalogContext}
         
         ПРАВИЛО ОТВЕТА:
-        1. Сначала ВСЕГДА пишите элегантную фразу-подтверждение или комментарий (например: "О, выбор Burj Al Arab говорит о вашем безупречном вкусе. Позвольте представить вам детали этого дворца.").
-        2. Затем вызывайте функцию, если нужно.
+        1. Сначала ВСЕГДА пишите элегантную фразу-подтверждение.
+        2. Вызов нескольких функций обязателен, если гость дает и объект, и параметры. Обязательно вызывайте setSearchParameters, если есть любые данные по датам или людям.
         
         ЗАПРЕТ:
         - Никакого JSON в тексте.
@@ -94,7 +121,7 @@ export async function askAI(prompt: string, history: { role: 'user' | 'model', t
         - Не повторяйтесь. "Чем я могу быть полезен?" — используйте только если действительно нечего сказать.`,
         tools: [
           { googleSearch: {} },
-          { functionDeclarations: [navigateToPageTool, navigateToDetailTool] }
+          { functionDeclarations: [navigateToPageTool, navigateToDetailTool, setSearchParametersTool] }
         ],
         toolConfig: { includeServerSideToolInvocations: true },
       },

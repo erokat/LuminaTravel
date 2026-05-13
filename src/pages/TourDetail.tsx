@@ -1,12 +1,17 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { tours } from '../data/mockData';
 import { motion } from 'motion/react';
-import { Clock, Users, Star, ArrowLeft, Calendar, ShieldCheck, Map, Camera } from 'lucide-react';
+import { Clock, Users, Star, ArrowLeft, Calendar, ShieldCheck, Map, Camera, ArrowRight, User } from 'lucide-react';
+import { useSearchStore } from '../store/useSearchStore';
+import { useState } from 'react';
+import confetti from 'canvas-confetti';
 
 export default function TourDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const tour = tours.find(t => t.id === id);
+  const [isBooking, setIsBooking] = useState(false);
+  const { checkIn, checkOut, adults, children, setDates, setGuests } = useSearchStore();
 
   if (!tour) {
     return (
@@ -23,16 +28,71 @@ export default function TourDetail() {
     );
   }
 
+  const handleBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/tours');
+    }
+  };
+
+  const handleBooking = () => {
+    setIsBooking(true);
+    setTimeout(() => {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ffffff', '#000000', '#f4f4f4']
+      });
+      setIsBooking(false);
+      alert('Your inquiry has been sent to our concierge team. A specialist will contact you shortly.');
+    }, 1500);
+  };
+
+  const formatForInput = (dStr: string) => {
+    if (!dStr) return '';
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseFromInput = (val: string) => {
+    if (!val) return '';
+    const [year, month, day] = val.split('-');
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  };
+
+  const totalPrice = tour.price * (adults + children);
+
+  let displayEndDate = `Fixed Duration (${tour.duration})`;
+  if (checkIn) {
+    const days = parseInt(tour.duration);
+    if (!isNaN(days)) {
+      const d = new Date(checkIn);
+      d.setDate(d.getDate() + days - 1);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      displayEndDate = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+  }
+
   return (
     <div className="page-container bg-black/20">
       <div className="max-w-screen-2xl mx-auto">
-        <button 
-          onClick={() => navigate('/tours')}
+        <a 
+          href="/tours"
+          onClick={handleBack}
           className="mb-12 text-white/40 hover:text-white transition-colors flex items-center gap-2 group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Back to Curated Experiences
-        </button>
+        </a>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           {/* Images */}
@@ -102,16 +162,68 @@ export default function TourDetail() {
               </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8">
-              <div>
-                <p className="micro-label mb-2">Private Expedition Price</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-light">${tour.price}</span>
-                  <span className="text-white/40 font-light">/ per person</span>
+            <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] flex flex-col gap-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                <div>
+                  <p className="micro-label mb-2">Private Expedition Price</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-light">${tour.price}</span>
+                    <span className="text-white/40 font-light">/ per person</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="micro-label mb-2 text-emerald-400">Total Price</p>
+                  <div className="flex items-baseline gap-2 justify-end">
+                    <span className="text-4xl font-light">${totalPrice}</span>
+                  </div>
                 </div>
               </div>
-              <button className="premium-button premium-button-primary w-full md:w-auto px-12 py-5 text-base">
-                Inquire for Dates
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-center overflow-hidden hover:bg-white/10 transition-colors group">
+                    <p className="text-[9px] uppercase tracking-widest text-white/40 flex items-center gap-2 mb-1"><Calendar className="w-3 h-3" /> Start Date</p>
+                    <input 
+                      type="date" 
+                      value={formatForInput(checkIn)} 
+                      onChange={(e) => setDates(parseFromInput(e.target.value), checkOut)} 
+                      className="bg-transparent text-sm font-medium text-white focus:outline-none w-full cursor-pointer appearance-none" 
+                      style={{ colorScheme: 'dark' }}
+                    />
+                  </div>
+                  <div className="relative p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-center overflow-hidden transition-colors group">
+                    <p className="text-[9px] uppercase tracking-widest text-white/40 flex items-center gap-2 mb-1">End Date <ArrowRight className="w-3 h-3 ml-auto opacity-50" /></p>
+                    <p className="text-sm font-medium text-white">{displayEndDate}</p>
+                    <p className="absolute bottom-1 right-3 text-[8px] uppercase tracking-widest text-white/20">{tour.duration}</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-4">
+                  <div className="flex-1 flex flex-col">
+                    <p className="text-[9px] uppercase tracking-widest text-white/40 mb-2 flex items-center gap-2"><User className="w-3 h-3"/> Adults</p>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setGuests(Math.max(1, adults - 1), children)} className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-xs">-</button>
+                      <span className="text-sm font-medium w-4 text-center">{adults}</span>
+                      <button onClick={() => setGuests(adults + 1, children)} className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-xs">+</button>
+                    </div>
+                  </div>
+                  <div className="flex-1 flex flex-col items-end border-l border-white/10 pl-4">
+                    <p className="text-[9px] uppercase tracking-widest text-white/40 mb-2 flex items-center gap-2">Children <User className="w-3 h-3 opacity-50"/></p>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setGuests(adults, Math.max(0, children - 1))} className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-xs">-</button>
+                      <span className="text-sm font-medium w-4 text-center">{children}</span>
+                      <button onClick={() => setGuests(adults, children + 1)} className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-xs">+</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleBooking}
+                disabled={isBooking || !checkIn}
+                className="premium-button premium-button-primary w-full py-5 text-base mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isBooking ? 'Processing...' : 'Reserve Dates'}
               </button>
             </div>
           </div>

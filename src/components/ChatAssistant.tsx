@@ -9,6 +9,8 @@ import { askAI } from '../services/aiService';
 import { CHAT_SCRIPTS, FAQ_DATA } from '../data/chatScripts';
 import { hotels, tours } from '../data/mockData';
 
+import { useSearchStore } from '../store/useSearchStore';
+
 function Typewriter({ text, speed = 20, onComplete }: { text: string, speed?: number, onComplete?: () => void }) {
   const [displayedText, setDisplayedText] = useState('');
   const [index, setIndex] = useState(0);
@@ -52,10 +54,21 @@ export default function ChatAssistant() {
   }, []);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping]);
+    const scrollToBottom = () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    };
+    
+    // Immediate scroll
+    scrollToBottom();
+    // Scroll after render
+    requestAnimationFrame(scrollToBottom);
+    // Scroll after typical animation completes
+    setTimeout(scrollToBottom, 300);
+    setTimeout(scrollToBottom, 500);
+
+  }, [messages, isTyping, isOpen]);
 
   const handleAction = (action: ChatAction, label?: string) => {
     if (label) {
@@ -114,23 +127,7 @@ export default function ChatAssistant() {
       return;
     }
 
-    // 3. Check for specific assets
-    const interestedHotel = hotels.find(h => input.toLowerCase().includes(h.name.toLowerCase()));
-    if (interestedHotel) {
-      setTimeout(() => {
-        setTyping(false);
-        addMessage({
-          role: 'bot',
-          text: `The ${interestedHotel.name} is one of our most requested residences. Starting from $${interestedHotel.pricePerNight} per night.`,
-          image: interestedHotel.images[0],
-          price: `$${interestedHotel.pricePerNight}`,
-          options: [{ label: 'View Details', action: { type: 'select_hotel', hotelId: interestedHotel.id } }]
-        });
-      }, 1000);
-      return;
-    }
-
-    // 4. Default to AI
+    // Default to AI
     const history = messages.slice(-10).map(m => ({
       role: m.role === 'user' ? 'user' as const : 'model' as const,
       text: m.text
@@ -141,7 +138,21 @@ export default function ChatAssistant() {
     addMessage({ role: 'bot', text: aiResponse.text });
 
     if (aiResponse.functionCalls) {
-      // Execute function calls after a short delay so the text is visible
+      // Handle non-navigational calls immediately
+      aiResponse.functionCalls?.forEach(call => {
+        if (call.name === 'setSearchParameters') {
+          const { checkIn, checkOut, adults, children } = call.args;
+          if (checkIn || checkOut) useSearchStore.getState().setDates(checkIn || '', checkOut || '');
+          if (adults !== undefined || children !== undefined) {
+             useSearchStore.getState().setGuests(
+               adults !== undefined ? adults : useSearchStore.getState().adults, 
+               children !== undefined ? children : useSearchStore.getState().children
+             );
+          }
+        }
+      });
+
+      // Execute navigation calls after a short delay so the text is visible
       setTimeout(() => {
         aiResponse.functionCalls?.forEach(call => {
           if (call.name === 'navigateToPage') {

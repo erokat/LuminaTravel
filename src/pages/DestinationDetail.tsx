@@ -9,10 +9,6 @@ export default function DestinationDetail() {
   const { id } = useParams<{ id: string }>();
   const destination = destinations.find(d => d.id === id);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [id]);
-
   if (!destination) {
     return (
       <div className="pt-40 text-center">
