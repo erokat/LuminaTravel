@@ -1,0 +1,125 @@
+import { GoogleGenAI, Type, FunctionDeclaration, Content } from "@google/genai";
+import { hotels, tours, destinations } from "../data/mockData";
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+const navigateToPageTool: FunctionDeclaration = {
+  name: "navigateToPage",
+  description: "Navigates the user to a main page of the website.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      page: {
+        type: Type.STRING,
+        description: "The name of the page to navigate to.",
+        enum: ["Home", "Destinations", "Hotels", "Tours", "Flights"],
+      },
+    },
+    required: ["page"],
+  },
+};
+
+const navigateToDetailTool: FunctionDeclaration = {
+  name: "navigateToDetail",
+  description: "Navigates the user to a specific detail page for a hotel, tour, or destination.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      type: {
+        type: Type.STRING,
+        description: "The type of item to view.",
+        enum: ["hotel", "tour", "destination"],
+      },
+      id: {
+        type: Type.STRING,
+        description: "The unique ID of the item from the catalog (e.g., 'burj-al-arab', 'dubai', 'tokyo').",
+      },
+    },
+    required: ["type", "id"],
+  },
+};
+
+export interface AIResponse {
+  text: string;
+  functionCalls?: any[];
+}
+
+export async function askAI(prompt: string, history: { role: 'user' | 'model', text: string }[] = []): Promise<AIResponse> {
+  if (!GEMINI_API_KEY) {
+    return { text: "API key is not configured. Please add it to your environment variables." };
+  }
+
+  try {
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    
+    const catalogContext = `
+      КАТАЛОГ СИСТЕМЫ:
+      Направления (Destinations): ${destinations.map(d => `${d.name} (id: ${d.id})`).join(", ")}
+      Отели (Hotels): ${hotels.map(h => `${h.name} (id: ${h.id})`).join(", ")}
+      Туры (Tours): ${tours.map(t => `${t.name} (id: ${t.id})`).join(", ")}
+    `;
+
+    const contents: Content[] = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
+
+    // Add the current prompt
+    contents.push({ role: "user", parts: [{ text: prompt }] });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents,
+      config: {
+        systemInstruction: `Вы — элитный и остроумный консьерж Lumina Elite Travel. 
+        
+        ВАШ СТИЛЬ:
+        - ЯЗЫК: Безупречный РУССКИЙ.
+        - ТОН: Высокий сервис, но с теплотой и харизмой. Вы — не робот, а живая легенда консьерж-сервиса.
+        - ВАРИАТИВНОСТЬ: Избегайте шаблонов. Каждый ваш ответ должен звучать свежо. Используйте разнообразные приветствия и подтверждения.
+        - КРАТКОСТЬ: 2-3 предложения. Мы ценим время гостя высокого уровня.
+        
+        ИНСТРУМЕНТЫ:
+        - navigateToPage: используйте для списков (отели, туры, направления, полеты).
+        - navigateToDetail: используйте для конкретных объектов из КАТАЛОГА.
+        - КАТАЛОГ: ${catalogContext}
+        
+        ПРАВИЛО ОТВЕТА:
+        1. Сначала ВСЕГДА пишите элегантную фразу-подтверждение или комментарий (например: "О, выбор Burj Al Arab говорит о вашем безупречном вкусе. Позвольте представить вам детали этого дворца.").
+        2. Затем вызывайте функцию, если нужно.
+        
+        ЗАПРЕТ:
+        - Никакого JSON в тексте.
+        - Никаких технических пояснений ("я вызвал функцию").
+        - Не повторяйтесь. "Чем я могу быть полезен?" — используйте только если действительно нечего сказать.`,
+        tools: [
+          { googleSearch: {} },
+          { functionDeclarations: [navigateToPageTool, navigateToDetailTool] }
+        ],
+        toolConfig: { includeServerSideToolInvocations: true },
+      },
+    });
+
+    let rawText = response.text || "";
+    
+    if (!rawText && response.functionCalls && response.functionCalls.length > 0) {
+      const firstCall = response.functionCalls[0];
+      if (firstCall.name === 'navigateToDetail') {
+        const id = firstCall.args.id;
+        rawText = `Мгновение, я открываю для вас подробности этого исключительного места.`;
+      } else {
+        rawText = `Секунду, я подготовлю для вас соответствующий раздел коллекции.`;
+      }
+    }
+
+    if (!rawText) rawText = "К вашим услугам. Что именно вас интересует сегодня?";
+
+    return {
+      text: rawText,
+      functionCalls: response.functionCalls
+    };
+  } catch (error) {
+    console.error("AI Error:", error);
+    return { text: "Приношу свои извинения, у меня возникли временные трудности. Как я могу помочь вам иначе?" };
+  }
+}
