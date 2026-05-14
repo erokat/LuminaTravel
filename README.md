@@ -1,61 +1,84 @@
-# Lumina Elite Travel
+# 💎 Lumina Elite Travel – Консьерж-сервис класса люкс
 
-Lumina Elite Travel is a luxury travel concierge application designed to provide a seamless and sophisticated experience for planning high-end journeys.
+Lumina Elite Travel — это приложение для консьерж-сервиса в сфере роскошных путешествий, разработанное для обеспечения безупречного и изысканного опыта планирования поездок высшего класса.
 
-## Features
+## ✨ Основные возможности
 
-- **Curated Collections**: Explore hand-picked destinations, hotels, and private tours.
-- **AI Concierge**: An elite AI assistant powered by OpenRouter (Gemini) to help with inquiries and bookings in multiple languages.
-- **Luxury Aesthetic**: A refined, dark-themed UI with fluid animations using Framer Motion.
-- **Real-time Interaction**: Instant chat and dynamic routing for an immersive experience.
+- **Курируемые коллекции**: Исследуйте вручную отобранные направления, отели и частные туры.
+- **Элитный ИИ-консьерж**: Продвинутый ИИ-ассистент на базе **OpenRouter (Gemini)**, обеспечивающий многоязычную поддержку (русский/английский) для индивидуальных запросов.
+- **Эстетика роскоши**: Изысканный интерфейс в темных тонах с плавными анимациями на базе Framer Motion.
+- **Взаимодействие в реальном времени**: Мгновенный чат и динамическая маршрутизация для полного погружения.
+- **Безопасный бэкенд**: Сервер на Express для проксирования API и развертывания статики в продакшене.
 
-## Tech Stack
+## Стек технологий
 
 - **Frontend**: React, Vite, Tailwind CSS, Framer Motion.
-- **Icons**: Lucide React.
-- **AI**: OpenRouter API.
-- **Server**: Express (for API routing and production hosting).
+- **Иконки**: Lucide React.
+- **ИИ**: OpenRouter API (Gemini Pro).
+- **Сервер**: Express (маршрутизация API и хостинг).
 
-## Getting Started
+## 📂 Структура проекта
 
-### Prerequisites
+```text
+LuminaTravel/
+├── src/                # Исходный код фронтенда (React)
+│   ├── components/     # Многоразовые UI-компоненты
+│   ├── pages/          # Страницы приложения (Направления, Туры и т.д.)
+│   ├── hooks/          # Пользовательские React-хуки
+│   └── assets/         # Изображения, шрифты и стили
+├── server/             # Бэкенд на Express (API и хостинг)
+├── public/             # Статические ресурсы
+├── dist/               # Собранное приложение (production build)
+└── .env.example        # Шаблон переменных окружения
+```
+
+## 🚀 Начало работы
+
+### Предварительные требования
 
 - Node.js (v18 or higher)
-- npm
+- Менеджер пакетов npm
 
-### Installation
+### Установка
 
-1. Clone the repository or extract the ZIP.
-2. Install dependencies:
+1. Клонируйте репозиторий или распакуйте архив с проектом.
+2. Установите зависимости:
+
    ```bash
    npm install
    ```
-3. Set up environment variables:
-   - Create a `.env` file based on `.env.example`.
-   - Add your `OPENROUTER_API_KEY`.
 
-### Development
+3. Настройте переменные окружения:
+   Создайте файл `.env` в корневой директории, используя данные из `.env.example`:
 
-Run the development server (which includes the Express API):
-```bash
-npm run dev
-```
-The application will be available at `http://localhost:3000`.
+   ```env
+   PORT=3000
+   OPENROUTER_API_KEY=ваш_ключ_здесь
+   GEMINI_API_KEY=ваш_ключ_здесь
+   APP_URL=http://localhost:3000
+   ```
 
-### Production
+### Доступные скрипты
 
-Build the application:
-```bash
-npm run build
-```
-The static files will be generated in the `dist` directory. The Express server is configured to serve these files in production mode.
+| Команда | Описание |
+| :--- | :--- |
+| `npm run dev` | Запуск приложения в режиме разработки (Frontend + Backend прокси). |
+| `npm run build` | Сборка фронтенда для продакшена в папку `dist`. |
+| `npm run start` | Запуск Express-сервера для обслуживания продакшн-файлов. |
+| `npm run lint` | Запуск ESLint для проверки качества кода. |
 
-## Usage Instructions
+## 🤖 Конфигурация ИИ-консьержа
 
-- **Chat**: Use the chat bubble in the bottom right to talk to Lumina AI. It supports Russian and English.
-- **Destinations**: Click on cards in the Destinations page to view detailed information about the location, curated hotels, and experiences.
-- **Tours**: Use the "View Curated Tours" buttons to explore our exclusive private journeys.
+ИИ-ассистент использует **OpenRouter** для доступа к модели Gemini Pro.
 
-## Author
+- **Эндпоинт**: Запросы проходят через Express-сервер, чтобы скрыть API-ключи от клиента.
+- **Контекст**: Система оптимизирована для работы в сфере элитного туризма, консьерж-сервиса и поддерживает мультиязычность.
 
-Built with Passion for Luxury Travel.
+## 📖 Инструкция по использованию
+
+- **Чат**: Используйте виджет чата в правом нижнем углу для связи с Lumina AI. Поддерживаются русский и английский языки.
+- **Направления**: Кликайте по карточкам на странице направлений для просмотра подробной информации об отелях и впечатлениях.
+- **Туры**: Нажимайте кнопку «Просмотреть туры», чтобы изучить эксклюзивные частные маршруты.
+
+---
+*Дисклеймер: Данное приложение является демонстрацией дизайна класса люкс и возможностей интеграции ИИ.*
