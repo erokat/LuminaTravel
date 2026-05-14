@@ -2,6 +2,7 @@ import { GoogleGenAI, Type, FunctionDeclaration, Content } from "@google/genai";
 import { hotels, tours, destinations } from "../data/mockData";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 const navigateToPageTool: FunctionDeclaration = {
   name: "navigateToPage",
@@ -70,55 +71,100 @@ export interface AIResponse {
   functionCalls?: any[];
 }
 
-export async function askAI(prompt: string, history: { role: 'user' | 'model', text: string }[] = []): Promise<AIResponse> {
-  if (!GEMINI_API_KEY) {
-    return { text: "API key is not configured. Please add it to your environment variables." };
+async function askOpenRouter(prompt: string, history: { role: 'user' | 'model', text: string }[], systemInstruction: string): Promise<AIResponse> {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OpenRouter API key is not configured.");
   }
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-    
-    const catalogContext = `
-      КАТАЛОГ СИСТЕМЫ:
-      Направления (Destinations): ${destinations.map(d => `${d.name} (id: ${d.id})`).join(", ")}
-      Отели (Hotels): ${hotels.map(h => `${h.name} (id: ${h.id})`).join(", ")}
-      Туры (Tours): ${tours.map(t => `${t.name} (id: ${t.id})`).join(", ")}
-    `;
+  const messages = [
+    { role: "system", content: systemInstruction },
+    ...history.map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.text
+    })),
+    { role: "user", content: prompt }
+  ];
 
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": window.location.origin,
+      "X-Title": "Lumina Elite Travel"
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-exp:free",
+      messages,
+      tools: [
+        { type: "function", function: navigateToPageTool },
+        { type: "function", function: navigateToDetailTool },
+        { type: "function", function: setSearchParametersTool }
+      ],
+      tool_choice: "auto"
+    })
+  });
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+
+  const message = data.choices[0].message;
+  const functionCalls = message.tool_calls?.map((tc: any) => ({
+    name: tc.function.name,
+    args: JSON.parse(tc.function.arguments)
+  }));
+
+  return {
+    text: message.content || "",
+    functionCalls
+  };
+}
+
+export async function askAI(prompt: string, history: { role: 'user' | 'model', text: string }[] = []): Promise<AIResponse> {
+  if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
+    return { text: "API keys are not configured. Please add GEMINI_API_KEY or OPENROUTER_API_KEY to your environment." };
+  }
+
+  const catalogContext = `
+    КАТАЛОГ СИСТЕМЫ:
+    Направления (Destinations): ${destinations.map(d => `${d.name} (id: ${d.id})`).join(", ")}
+    Отели (Hotels): ${hotels.map(h => `${h.name} (id: ${h.id})`).join(", ")}
+    Туры (Tours): ${tours.map(t => `${t.name} (id: ${t.id})`).join(", ")}
+  `;
+
+  const systemInstruction = `Вы — элитный и остроумный консьерж Lumina Elite Travel. 
+        
+  ВАШ СТИЛЬ:
+  - ЯЗЫК: Безупречный РУССКИЙ.
+  - ТОН: Высокий сервис, но с теплотой и харизмой. Вы — не робот, а живая легенда консьерж-сервиса.
+  - ВАРИАТИВНОСТЬ: Избегайте шаблонов. Каждый ваш ответ должен звучать свежо.
+  - КРАТКОСТЬ: 2-3 предложения.
+  
+  ИНСТРУМЕНТЫ:
+  - navigateToPage: для списков (отели, туры, направления, полеты).
+  - navigateToDetail: если гость выбрал конкретное место ( hotel/tour/destination ).
+  - setSearchParameters: если названы даты или количество гостей.
+  - КАТАЛОГ: ${catalogContext}
+  
+  ПРАВИЛО ОТВЕТА:
+  1. Сначала элегантная фраза-подтверждение.
+  2. Вызов функций без технического описания.`;
+
+  try {
+    if (!GEMINI_API_KEY) throw new Error("Gemini key missing, falling back...");
+
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     const contents: Content[] = history.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }]
     }));
-
-    // Add the current prompt
     contents.push({ role: "user", parts: [{ text: prompt }] });
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3-flash-exp:free",
       contents,
       config: {
-        systemInstruction: `Вы — элитный и остроумный консьерж Lumina Elite Travel. 
-        
-        ВАШ СТИЛЬ:
-        - ЯЗЫК: Безупречный РУССКИЙ.
-        - ТОН: Высокий сервис, но с теплотой и харизмой. Вы — не робот, а живая легенда консьерж-сервиса.
-        - ВАРИАТИВНОСТЬ: Избегайте шаблонов. Каждый ваш ответ должен звучать свежо. Используйте разнообразные приветствия и подтверждения.
-        - КРАТКОСТЬ: 2-3 предложения. Мы ценим время гостя высокого уровня.
-        
-        ИНСТРУМЕНТЫ:
-        - navigateToPage: используйте для списков (отели, туры, направления, полеты).
-        - navigateToDetail: используйте, чтобы перевести гостя на страницу отеля, тура, или направления (ЕСЛИ ГОСТЬ НАЗВАЛ/ВЫБРАЛ КОНКРЕТНОЕ МЕСТО, СРАЗУ ВЫЗЫВАЙТЕ ЭТУ ФУНКЦИЮ).
-        - setSearchParameters: ОБЯЗАТЕЛЬНО используйте, если гость называет даты, месяц, время заезда/выезда или количество гостей (взрослых/детей). Парсите всё в формат YYYY-MM-DD если возможно, либо оставляйте текущий год (например, '2026-08-12', '2026-08-19').
-        - КАТАЛОГ: ${catalogContext}
-        
-        ПРАВИЛО ОТВЕТА:
-        1. Сначала ВСЕГДА пишите элегантную фразу-подтверждение.
-        2. Вызов нескольких функций обязателен, если гость дает и объект, и параметры. Обязательно вызывайте setSearchParameters, если есть любые данные по датам или людям.
-        
-        ЗАПРЕТ:
-        - Никакого JSON в тексте.
-        - Никаких технических пояснений ("я вызвал функцию").
-        - Не повторяйтесь. "Чем я могу быть полезен?" — используйте только если действительно нечего сказать.`,
+        systemInstruction,
         tools: [
           { googleSearch: {} },
           { functionDeclarations: [navigateToPageTool, navigateToDetailTool, setSearchParametersTool] }
@@ -133,9 +179,11 @@ export async function askAI(prompt: string, history: { role: 'user' | 'model', t
     if (textPart) {
       rawText = textPart.text;
     }
-    
-    if (!rawText && response.functionCalls && response.functionCalls.length > 0) {
-      const callNames = response.functionCalls.map(c => c.name);
+
+    const functionCalls = parts.filter(p => p.functionCall).map(p => p.functionCall);
+
+    if (!rawText && functionCalls.length > 0) {
+      const callNames = functionCalls.map(c => c.name);
       if (callNames.includes('navigateToDetail')) {
         rawText = `Мгновение, я открываю для вас подробности этого исключительного места.`;
       } else if (callNames.includes('setSearchParameters') && callNames.includes('navigateToPage')) {
@@ -151,10 +199,18 @@ export async function askAI(prompt: string, history: { role: 'user' | 'model', t
 
     return {
       text: rawText,
-      functionCalls: response.functionCalls
+      functionCalls: functionCalls.length > 0 ? functionCalls : undefined
     };
   } catch (error) {
-    console.error("AI Error:", error);
-    return { text: "Приношу свои извинения, у меня возникли временные трудности. Как я могу помочь вам иначе?" };
+    console.warn("Gemini Error, trying OpenRouter fallback...", error);
+
+    if (OPENROUTER_API_KEY) {
+      try {
+        return await askOpenRouter(prompt, history, systemInstruction);
+      } catch (orError) {
+        console.error("OpenRouter Error:", orError);
+      }
+    }
+    return { text: "Приношу свои глубочайшие извинения. Моя система связи временно перегружена. Попробуем позже?" };
   }
 }
