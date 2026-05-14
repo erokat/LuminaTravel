@@ -40,6 +40,8 @@ export default function HotelDetail() {
 
   const formatForInput = (dStr: string) => {
     if (!dStr) return '';
+    // If it's already YYYY-MM-DD, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return dStr;
     const d = new Date(dStr);
     if (isNaN(d.getTime())) return '';
     const year = d.getFullYear();
@@ -49,9 +51,13 @@ export default function HotelDetail() {
   };
 
   const parseFromInput = (val: string) => {
-    if (!val) return '';
-    const [year, month, day] = val.split('-');
-    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    return val; // Keep as ISO YYYY-MM-DD
+  };
+
+  const displayDate = (dStr: string) => {
+    if (!dStr) return '';
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return dStr;
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   };
@@ -189,6 +195,7 @@ export default function HotelDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-center overflow-hidden hover:bg-white/10 transition-colors group">
                   <p className="text-[9px] uppercase tracking-widest text-white/40 flex items-center gap-2 mb-1"><Calendar className="w-3 h-3" /> Check In</p>
+                  <p className="text-[10px] text-white/60 mb-1">{displayDate(checkIn)}</p>
                   <input 
                     type="date" 
                     value={formatForInput(checkIn)} 
@@ -199,6 +206,7 @@ export default function HotelDetail() {
                 </div>
                 <div className="relative p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-center overflow-hidden hover:bg-white/10 transition-colors group">
                   <p className="text-[9px] uppercase tracking-widest text-white/40 flex items-center gap-2 mb-1">Check Out <ArrowRight className="w-3 h-3 ml-auto opacity-50" /></p>
+                  <p className="text-[10px] text-white/60 mb-1">{displayDate(checkOut)}</p>
                   <input 
                     type="date" 
                     value={formatForInput(checkOut)} 

@@ -1,22 +1,33 @@
 import { tours } from '../data/mockData';
 import { motion } from 'motion/react';
-import { Clock, Users, Star, ArrowRight } from 'lucide-react';
+import { Clock, Users, Star, ArrowRight, Search, Calendar } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
+import { useSearchStore } from '../store/useSearchStore';
 
 const MotionLink = motion.create(Link);
 
 export default function Tours() {
   const location = useLocation();
+  const { destination, setDestination, checkIn, checkOut, adults } = useSearchStore();
   const searchParams = new URLSearchParams(location.search);
   const filter = searchParams.get('filter') || '';
 
-  const filteredTours = filter 
-    ? tours.filter(t => 
-        t.name.toLowerCase().includes(filter.toLowerCase()) || 
-        t.description.toLowerCase().includes(filter.toLowerCase()) ||
-        t.id.toLowerCase().includes(filter.toLowerCase())
-      )
-    : tours;
+  const filteredTours = tours.filter(t => {
+    const searchFilter = (filter || '').toLowerCase();
+    const searchDest = (destination || '').toLowerCase();
+
+    const matchesFilter = !filter || 
+      t.name?.toLowerCase().includes(searchFilter) || 
+      t.description?.toLowerCase().includes(searchFilter) ||
+      t.id?.toLowerCase().includes(searchFilter);
+    
+    const matchesDestination = !destination ||
+      t.destinationId?.toLowerCase() === searchDest ||
+      t.name?.toLowerCase().includes(searchDest) ||
+      t.description?.toLowerCase().includes(searchDest);
+
+    return matchesFilter && matchesDestination;
+  });
 
   return (
     <div className="page-container">
@@ -24,10 +35,40 @@ export default function Tours() {
         <header className="mb-16">
           <h4 className="micro-label mb-4 italic">Bespoke Adventures</h4>
           <h1 className="text-5xl md:text-7xl font-light italic mb-8">Curated Experiences</h1>
-          <p className="text-white/60 font-light max-w-2xl leading-relaxed">
-            From private yacht charters in the Maldives to cultural odyssey through Japan, 
-            our tours are designed for the truly curious.
-          </p>
+          <div className="flex flex-col md:flex-row gap-8 items-start md:items-end justify-between">
+            <div className="flex-1">
+              <p className="text-white/60 font-light max-w-2xl leading-relaxed mb-6">
+                From private yacht charters in the Maldives to cultural odyssey through Japan, 
+                our tours are designed for the truly curious.
+              </p>
+              {(checkIn || adults > 2) && (
+                <div className="flex items-center gap-6 text-[10px] uppercase tracking-widest text-white/40 italic">
+                  {checkIn && (
+                    <div className="flex items-center gap-2">
+                       <Calendar className="w-3 h-3" />
+                       <span>Planning for {checkIn}</span>
+                    </div>
+                  )}
+                  {adults > 0 && (
+                    <div className="flex items-center gap-2">
+                       <Users className="w-3 h-3" />
+                       <span>{adults} Travelers</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="w-full md:w-96 relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-white transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Find an expedition..."
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-light focus:outline-none focus:border-white/30 transition-all"
+              />
+            </div>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">

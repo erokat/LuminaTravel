@@ -53,8 +53,10 @@ export type Message = {
   role: MessageRole;
   text: string;
   options?: { label: string; action: ChatAction }[];
+  functionCalls?: { name: string; args: any }[];
   timestamp: number;
   image?: string;
   price?: string;
   status?: 'sent' | 'pending';
+  reasoning_details?: any;
 };

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Send, Bot, User, WifiOff, Globe, Sparkles } from 'lucide-react';
 import { useChatStore } from '../store/useChatStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { ChatAction, Message } from '../api/types';
 import { askAI } from '../services/aiService';
@@ -16,6 +16,10 @@ function Typewriter({ text, speed = 20, onComplete }: { text: string, speed?: nu
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
+    if (!text) {
+      if (onComplete) onComplete();
+      return;
+    }
     if (index < text.length) {
       const timeout = setTimeout(() => {
         setDisplayedText((prev) => prev + text[index]);
@@ -36,6 +40,7 @@ export default function ChatAssistant() {
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleOnline = () => {
@@ -70,39 +75,51 @@ export default function ChatAssistant() {
 
   }, [messages, isTyping, isOpen]);
 
-  const handleAction = (action: ChatAction, label?: string) => {
+  const handleAction = (action: ChatAction, label?: string, silent: boolean = false) => {
     if (label) {
       addMessage({ role: 'user', text: label });
     }
 
     const performNav = (finalPath: string) => {
-      navigate(finalPath, { replace: true });
+      const currentPath = location.pathname + location.search;
+      if (finalPath === currentPath) return false;
+      navigate(finalPath);
+      return true;
     };
 
     if (action.type === 'navigate') {
       const path = action.filter 
         ? `${action.path}?filter=${encodeURIComponent(action.filter)}` 
         : action.path;
-      performNav(path);
-      setTyping(true);
-      setTimeout(() => {
-        setTyping(false);
-        addMessage({ role: 'bot', text: 'Конечно. Мгновение, я подготовлю для вас соответствующий раздел коллекции.' });
-      }, 600);
+      if (performNav(path)) {
+        if (!silent) {
+          setTyping(true);
+          setTimeout(() => {
+            setTyping(false);
+            addMessage({ role: 'bot', text: 'С удовольствием. Мгновение — и я представлю вашему вниманию эту кулуарную коллекцию.' });
+          }, 600);
+        }
+      }
     } else if (action.type === 'select_hotel') {
-      performNav(`/hotels/${action.hotelId}`);
-      setTyping(true);
-      setTimeout(() => {
-        setTyping(false);
-        addMessage({ role: 'bot', text: 'Превосходный выбор. Открываю детали этого исключительного места.' });
-      }, 600);
+      if (performNav(`/hotels/${action.hotelId}`)) {
+        if (!silent) {
+          setTyping(true);
+          setTimeout(() => {
+            setTyping(false);
+            addMessage({ role: 'bot', text: 'Ваш выбор безупречен. Позвольте погрузить вас в атмосферу этого исключительного места.' });
+          }, 600);
+        }
+      }
     } else if (action.type === 'select_tour') {
-      performNav(`/tours/${action.tourId}`);
-      setTyping(true);
-      setTimeout(() => {
-        setTyping(false);
-        addMessage({ role: 'bot', text: 'Великолепное направление. Открываю подробности для вас.' });
-      }, 600);
+      if (performNav(`/tours/${action.tourId}`)) {
+        if (!silent) {
+          setTyping(true);
+          setTimeout(() => {
+            setTyping(false);
+            addMessage({ role: 'bot', text: 'Потрясающее направление. Мгновение — и я открою для вас его тайное великолепие.' });
+          }, 600);
+        }
+      }
     } else if (action.type === 'scripted_next') {
       const step = CHAT_SCRIPTS[action.nextStep];
       if (step) {
@@ -144,57 +161,100 @@ export default function ChatAssistant() {
 
     // Default to AI
     const history = messages.slice(-10).map(m => ({
+      id: m.id,
       role: m.role === 'user' ? 'user' as const : 'model' as const,
-      text: m.text
+      text: m.text,
+      functionCalls: m.functionCalls,
+      reasoning_details: m.reasoning_details
     }));
 
-    const aiResponse = await askAI(input, history);
+    const currentPath = location.pathname + location.search;
+    const aiResponse = await askAI(input, history, currentPath);
+    
+    console.log("[AI Response]", aiResponse);
+
     setTyping(false);
-    addMessage({ role: 'bot', text: aiResponse.text });
+    addMessage({ 
+      role: 'bot', 
+      text: aiResponse.text,
+      functionCalls: aiResponse.functionCalls,
+      reasoning_details: aiResponse.reasoning_details
+    });
 
     if (aiResponse.functionCalls) {
-      // Handle non-navigational calls immediately
-      aiResponse.functionCalls?.forEach(call => {
+      console.log("[AI] Executing Function Calls:", aiResponse.functionCalls);
+      // 1. Handle non-navigational calls immediately (Search Parameters)
+      aiResponse.functionCalls.forEach(call => {
+        if (!call || typeof call !== 'object') return;
+        const args = call.args || {};
+
         if (call.name === 'setSearchParameters') {
-          const { checkIn, checkOut, adults, children } = call.args;
-          if (checkIn || checkOut) useSearchStore.getState().setDates(checkIn || '', checkOut || '');
-          if (adults !== undefined || children !== undefined) {
-             useSearchStore.getState().setGuests(
-               adults !== undefined ? adults : useSearchStore.getState().adults, 
-               children !== undefined ? children : useSearchStore.getState().children
-             );
+          let { checkIn, checkOut, destination, adults, guests, children } = args;
+          
+          if (checkIn) {
+            if (!checkOut) {
+              const d = new Date(checkIn);
+              d.setDate(d.getDate() + 7);
+              checkOut = d.toISOString().split('T')[0];
+            }
+            useSearchStore.getState().setDates(checkIn, checkOut || '');
+          } else if (checkOut) {
+            useSearchStore.getState().setDates(useSearchStore.getState().checkIn || '', checkOut);
+          }
+          
+          if (destination) {
+            useSearchStore.getState().setDestination(destination);
+          }
+          
+          const currentStore = useSearchStore.getState();
+          const finalAdults = adults !== undefined ? Number(adults) : currentStore.adults;
+          const finalChildren = children !== undefined ? Number(children) : currentStore.children;
+          
+          if (!isNaN(finalAdults) && !isNaN(finalChildren)) {
+            console.log("[AI] Setting Guests:", { finalAdults, finalChildren });
+            useSearchStore.getState().setGuests(finalAdults, finalChildren);
           }
         }
       });
 
-      // Execute navigation calls after a short delay so the text is visible
-      setTimeout(() => {
-        aiResponse.functionCalls?.forEach(call => {
-          if (call.name === 'navigateToPage') {
-            const page = call.args.page.toLowerCase();
-            const pathMap: Record<string, string> = {
-              home: '/',
-              destinations: '/destinations',
-              hotels: '/hotels',
-              tours: '/tours',
-              flights: '/flights'
-            };
-            const path = pathMap[page];
-            if (path) {
-              handleAction({ type: 'navigate', path });
-            }
-          } else if (call.name === 'navigateToDetail') {
-            const { type, id } = call.args;
-            if (type === 'hotel') {
-              handleAction({ type: 'select_hotel', hotelId: id });
-            } else if (type === 'tour') {
-              handleAction({ type: 'select_tour', tourId: id });
-            } else if (type === 'destination') {
-              handleAction({ type: 'navigate', path: `/destinations/${id}` });
-            }
+      // 2. Execute navigation calls
+      // Use a small delay for state propagation if needed, though Zustand is sync
+      aiResponse.functionCalls.forEach(call => {
+        if (!call || typeof call !== 'object') return;
+        const args = call.args || {};
+
+        console.log(`[AI-DEBUG] Processing call: ${call.name} with args:`, args);
+
+        if (call.name === 'navigateToPage') {
+          const rawPage = args.page;
+          const page = typeof rawPage === 'string' ? rawPage.toLowerCase().trim() : '';
+          const pathMap: Record<string, string> = {
+            home: '/', main: '/', 'главная': '/', 'начало': '/',
+            destinations: '/destinations', destination: '/destinations', 'направления': '/destinations',
+            hotels: '/hotels', hotel: '/hotels', 'отели': '/hotels', 'отель': '/hotels',
+            tours: '/tours', tour: '/tours', 'туры': '/tours', 'тур': '/tours',
+            flights: '/flights', flight: '/flights', 'перелеты': '/flights', 'рейсы': '/flights'
+          };
+          const path = pathMap[page];
+          if (path) {
+            handleAction({ type: 'navigate', path }, undefined, true);
+          } else {
+            console.warn(`[AI-DEBUG] Unknown page: ${page}`);
           }
-        });
-      }, 2000);
+        } else if (call.name === 'navigateToDetail') {
+          const { type, id } = args;
+          console.log(`[AI-DEBUG] Attempting navigation with type: ${type}, id: ${id}`);
+          if (type === 'hotel' && id) {
+            handleAction({ type: 'select_hotel', hotelId: id }, undefined, true);
+          } else if (type === 'tour' && id) {
+            handleAction({ type: 'select_tour', tourId: id }, undefined, true);
+          } else if (type === 'destination' && id) {
+            handleAction({ type: 'navigate', path: `/destinations/${id}` }, undefined, true);
+          } else {
+            console.warn(`[AI-DEBUG] Failed to map navigateToDetail: ${type}/${id}`);
+          }
+        }
+      });
     }
   };
 
@@ -229,7 +289,7 @@ export default function ChatAssistant() {
         onClick={() => setOpen(!isOpen)}
         className={cn(
           "w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-colors duration-500",
-          isOpen ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white"
+          isOpen ? "bg-white text-black" : "bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] backdrop-blur-xl border border-[rgba(255,255,255,0.2)] text-white"
         )}
       >
         {isOpen ? <X /> : <MessageCircle />}
@@ -243,10 +303,10 @@ export default function ChatAssistant() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed bottom-0 right-0 w-full md:w-[450px] lg:w-[480px] h-full md:h-[75vh] bg-[#020202]/95 backdrop-blur-3xl z-[110] flex flex-col border-l md:border-t border-white/10 md:rounded-tl-[3.5rem] shadow-[-20px_0_60px_rgba(0,0,0,0.8)]"
+            className="fixed bottom-0 right-0 w-full md:w-[450px] lg:w-[480px] h-full md:h-[75vh] bg-[#020202]/95 backdrop-blur-3xl z-[110] flex flex-col border-l md:border-t border-[rgba(255,255,255,0.1)] md:rounded-tl-[3.5rem] shadow-[-20px_0_60px_rgba(0,0,0,0.8)]"
           >
             {/* Header */}
-            <div className="p-8 border-b border-white/10 flex items-center justify-between">
+            <div className="p-8 border-b border-[rgba(255,255,255,0.1)] flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)]">
                   <Bot className="w-7 h-7 text-black" />
@@ -259,7 +319,7 @@ export default function ChatAssistant() {
                     ) : (
                       <WifiOff className="w-3 h-3 text-red-500" />
                     )}
-                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-medium">
+                    <span className="text-[10px] uppercase tracking-widest text-[rgba(255,255,255,0.4)] font-medium">
                       {isOnline ? 'System Online' : 'Standard Connection'}
                     </span>
                   </div>
@@ -267,7 +327,7 @@ export default function ChatAssistant() {
               </div>
               <button 
                 onClick={() => setOpen(false)} 
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[rgba(255,255,255,0.1)] transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -292,7 +352,7 @@ export default function ChatAssistant() {
                   >
                     <div className={cn(
                       "w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 shadow-sm",
-                      msg.role === 'user' ? "bg-white/10 border border-white/10" : "bg-white"
+                      msg.role === 'user' ? "bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.1)]" : "bg-white"
                     )}>
                       {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-5 h-5 text-black" />}
                     </div>
@@ -308,7 +368,7 @@ export default function ChatAssistant() {
                           "inline-block px-6 py-4 rounded-2xl text-sm font-light leading-relaxed border transition-all break-words text-left",
                           msg.role === 'user' 
                             ? "bg-white text-black border-transparent rounded-tr-none shadow-lg" 
-                            : "glass border-white/5 rounded-tl-none text-white/90"
+                            : "glass border-[rgba(255,255,255,0.05)] rounded-tl-none text-[rgba(255,255,255,0.9)]"
                         )}>
                           {msg.role === 'bot' && i === messages.length - 1 ? (
                             <Typewriter text={msg.text} />
@@ -330,7 +390,7 @@ export default function ChatAssistant() {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
-                            className="mt-6 rounded-[2.5rem] overflow-hidden border border-white/10 relative group/img cursor-default shadow-2xl"
+                            className="mt-6 rounded-[2.5rem] overflow-hidden border border-[rgba(255,255,255,0.1)] relative group/img cursor-default shadow-2xl"
                           >
                             <img 
                               src={msg.image} 
@@ -362,10 +422,10 @@ export default function ChatAssistant() {
                     <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center">
                       <Bot className="w-5 h-5 text-black" />
                     </div>
-                    <div className="glass px-6 py-4 rounded-2xl rounded-tl-none flex gap-2 items-center border border-white/5">
-                      <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-white rounded-full" />
-                      <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-white rounded-full" />
-                      <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-white rounded-full" />
+                    <div className="glass px-6 py-4 rounded-2xl rounded-tl-none flex gap-2 items-center border border-[rgba(255,255,255,0.05)]">
+                    <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-white rounded-full" />
+                    <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-white rounded-full" />
+                    <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-white rounded-full" />
                     </div>
                   </motion.div>
                 )}
@@ -385,12 +445,12 @@ export default function ChatAssistant() {
                         {lastMsg.options.map((opt, idx) => (
                           <motion.button
                             key={idx}
-                            whileHover={{ y: -4, backgroundColor: 'rgba(255,255,255,1)', color: '#000' }}
+                            whileHover={{ y: -4 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleAction(opt.action, opt.label)}
-                            className="px-6 py-3 rounded-full border border-white/10 glass transition-all text-[11px] font-medium tracking-wider uppercase flex items-center gap-2 shadow-xl"
+                            className="px-6 py-3 rounded-full border border-[rgba(255,255,255,0.1)] glass hover:bg-white hover:text-black transition-all duration-300 text-[11px] font-medium tracking-wider uppercase flex items-center gap-2 shadow-xl"
                           >
-                            <Sparkles className="w-3.5 h-3.5 opacity-50" />
+                            <Sparkles className="w-3.5 h-3.5 opacity-50 transition-opacity" />
                             {opt.label}
                           </motion.button>
                         ))}
@@ -403,7 +463,7 @@ export default function ChatAssistant() {
             </div>
 
           {/* Input Area */}
-          <div className="p-8 border-t border-white/10 bg-black/60 backdrop-blur-3xl">
+          <div className="p-8 border-t border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.6)] backdrop-blur-3xl">
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
@@ -416,7 +476,7 @@ export default function ChatAssistant() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={isOnline ? "Describe your ideal journey..." : "Standard connection active..."}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-8 pr-16 text-sm font-light placeholder:text-white/20 focus:outline-none focus:border-white/30 focus:bg-white/[0.08] transition-all shadow-inner"
+                className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-2xl py-5 pl-8 pr-16 text-sm font-light placeholder:text-[rgba(255,255,255,0.2)] focus:outline-none focus:border-[rgba(255,255,255,0.3)] focus:bg-[rgba(255,255,255,0.08)] transition-all shadow-inner"
               />
               <button 
                 type="submit"

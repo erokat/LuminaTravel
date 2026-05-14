@@ -66,7 +66,7 @@ export default function Home() {
           <div className="flex items-end justify-between mb-16">
             <div>
               <h4 className="micro-label mb-4">Curated Collection</h4>
-              <h2 className="text-5xl font-light italic">Signature Destinations</h2>
+              <h2 className="text-5xl font-light italic">Experience the Extraordinary</h2>
             </div>
             <Link to="/destinations" className="text-sm uppercase tracking-widest text-white/60 hover:text-white flex items-center gap-2 transition-colors">
               View All <ChevronRight className="w-4 h-4" />

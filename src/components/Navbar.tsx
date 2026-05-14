@@ -18,6 +18,7 @@ export default function Navbar() {
   }, []);
 
   const navItems = [
+    { name: 'Home', path: '/' },
     { name: 'Hotels', path: '/hotels' },
     { name: 'Tours', path: '/tours' },
     { name: 'Flights', path: '/flights' },

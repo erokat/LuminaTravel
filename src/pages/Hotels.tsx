@@ -1,23 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, Star, MapPin, ChevronDown } from 'lucide-react';
 import { hotels } from '../data/mockData';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useSearchStore } from '../store/useSearchStore';
 
 const MotionLink = motion.create(Link);
 
 export default function Hotels() {
   const location = useLocation();
+  const { destination, setDestination, checkIn, checkOut, adults } = useSearchStore();
   const searchParams = new URLSearchParams(location.search);
   const initialFilter = searchParams.get('filter') || 'All';
   
   const [filter, setFilter] = useState(initialFilter);
   const categories = ['All', 'Luxury', 'Boutique', 'Resort', 'Villa'];
 
-  const filteredHotels = filter === 'All' 
-    ? hotels 
-    : hotels.filter(h => h.category === filter);
+  const displayDate = (dStr: string) => {
+    if (!dStr) return '';
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return dStr;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${d.getDate()}`;
+  };
+
+  const filteredHotels = hotels.filter(h => {
+    const searchDest = (destination || '').toLowerCase();
+    const matchesCategory = filter === 'All' || h.category === filter;
+    const matchesDestination = !destination || 
+      (h.destinationId?.toLowerCase() === searchDest) ||
+      h.name?.toLowerCase().includes(searchDest) || 
+      h.location?.address?.toLowerCase().includes(searchDest);
+    return matchesCategory && matchesDestination;
+  });
 
   return (
     <div className="page-container">
@@ -28,13 +44,28 @@ export default function Hotels() {
           <h1 className="text-5xl md:text-7xl font-light italic mb-8">Iconic Residences</h1>
           
           <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between mt-12 bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl">
-            <div className="flex-1 w-full relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-              <input 
-                type="text" 
-                placeholder="Search by destination or hotel name..."
-                className="w-full bg-transparent border-none pl-12 text-sm font-light focus:ring-0 placeholder:text-white/20 appearance-none"
-              />
+            <div className="flex-1 w-full flex flex-col md:flex-row gap-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <input 
+                  type="text" 
+                  placeholder="Search by destination or hotel name..."
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  className="w-full bg-transparent border-none pl-12 text-sm font-light focus:ring-0 placeholder:text-white/20 appearance-none"
+                />
+              </div>
+              
+              {(checkIn || adults > 2) && (
+                <div className="flex items-center gap-4 px-4 py-2 bg-white/5 rounded-xl border border-white/5 text-[10px] uppercase tracking-widest text-white/60">
+                   {checkIn && (
+                     <span>{displayDate(checkIn)} — {displayDate(checkOut)}</span>
+                   )}
+                   {adults > 0 && (
+                     <span>{adults} Guests</span>
+                   )}
+                </div>
+              )}
             </div>
             <div className="h-8 w-px bg-white/10 hidden lg:block" />
             <div className="flex items-center gap-4 w-full lg:w-auto overflow-x-auto scrollbar-hide">
@@ -115,7 +146,15 @@ export default function Hotels() {
         ) : (
           <div className="py-40 text-center glass rounded-[4rem]">
             <h3 className="text-3xl font-light italic text-white/40 mb-4">No iconic residences found</h3>
-            <button onClick={() => setFilter('All')} className="text-sm uppercase tracking-widest text-white underline underline-offset-8 decoration-white/20 hover:decoration-white transition-all">Clear Filters</button>
+            <button 
+              onClick={() => {
+                setFilter('All');
+                setDestination('');
+              }} 
+              className="text-sm uppercase tracking-widest text-white underline underline-offset-8 decoration-white/20 hover:decoration-white transition-all"
+            >
+              Clear Filters
+            </button>
           </div>
         )}
       </div>
